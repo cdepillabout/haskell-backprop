@@ -1,9 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+
+{-# OPTIONS_GHC -Wall #-}
 
 module Lib where
 
@@ -81,15 +85,34 @@ feedForward
    . Vec i Float -- ^ x
   -> Network (i ': j ': hs) -- ^ network of weights and biases
   -> ReverseActivations (i ': j ': hs)
-feedForward x net = ReverseActivationsLayer x $ (go x net :: ReverseActivations (j ': hs))
+feedForward x net =
+  ReverseActivationsLayer x $ (go x net :: ReverseActivations (j ': hs))
   where
     go
-      :: forall prevActLen hs
+      :: forall prevActLen something lalas
        . Vec prevActLen Float
-      -> Network (prevActLen ': hs)
-      -> ReverseActivations hs
-    go prevAct (Layer biases weighs nextLayers) =
-      let z = m
+      -> Network (prevActLen ': something ': lalas)
+      -> ReverseActivations (something ': lalas)
+    go prevAct (Layer biases weights End) =
+      let z = computeZ weights prevAct biases
+          activation = sigmoid z
+      in ReverseActivationsEnd activation
+    go prevAct (Layer biases weights nextLayers@Layer{}) =
+      let z = computeZ weights prevAct biases
+          activation = sigmoid z
+      in ReverseActivationsLayer activation $ go activation nextLayers
+
+
+computeZ :: Matrix '[n, m] Float -> Vec m Float -> Vec n Float -> Vec n Float
+computeZ weights prevAct biases = zipWithVec (+) (dotProdMatrix weights prevAct) biases
+
+-- | 
+--
+-- >>> let Just vec = fromListVec_ @N3 [3, 0, -1]
+-- >>> sigmoid vec
+-- 0.9525... :* (0.5 :* (0.2689... :* EmptyVec))
+sigmoid :: Floating a => Vec n a -> Vec n a
+sigmoid = fmap ((1 /) . (+ 1) . exp . negate)
 
 --         activation = x
 --         activations = [x] # list to store all the activations, layer by layer

@@ -29,3 +29,24 @@ dependencies:
 
 library:
   source-dirs: src
+
+tests:
+  # tasty:
+  #   main:                Spec.hs
+  #   source-dirs:         test/tasty
+  #   ghc-options:
+  #     - -threaded
+  #     - -rtsopts
+  #     - -with-rtsopts=-N
+  #   dependencies:
+  #     - haskell-backprop
+
+  doctest:
+    main:                Doctest.hs
+    source-dirs:         test/doctest
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - doctest
